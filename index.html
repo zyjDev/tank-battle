@@ -212,7 +212,7 @@ function generateMap(lvl) {
      [18,7,BRICK],[18,8,BRICK],[19,7,BRICK],[19,8,BRICK],
      [18,17,BRICK],[18,18,BRICK],[19,17,BRICK],[19,18,BRICK],
      [21,3,BRICK],[21,4,BRICK],[22,3,BRICK],[22,4,BRICK],
-     [21,9,BRICK],[21,10,BRICK],[22,9,BRICK],[22,10,BRICK],
+     [21,9,BRICK],[21,10,BRICK],
      [21,15,BRICK],[21,16,BRICK],[22,15,BRICK],[22,16,BRICK],
      [21,21,BRICK],[21,22,BRICK],[22,21,BRICK],[22,22,BRICK],
      [6,12,WATER],[6,13,WATER],[7,12,WATER],[7,13,WATER],
@@ -230,7 +230,7 @@ function generateMap(lvl) {
 
 function createPlayer() {
   return {
-    x: 9 * TILE, y: 22 * TILE,
+    x: 8 * TILE, y: 20 * TILE,
     w: TILE * 2, h: TILE * 2,
     dir: UP, speed: 2,
     color: '#ffcc00',
@@ -363,10 +363,10 @@ function updatePlayer() {
   if (player.cooldown > 0) player.cooldown--;
 
   let dx = 0, dy = 0;
-  if (keys['w'] || keys['W'] || keys['ArrowUp']) { player.dir = UP; dy = -player.speed; }
-  else if (keys['s'] || keys['S'] || keys['ArrowDown']) { player.dir = DOWN; dy = player.speed; }
-  else if (keys['a'] || keys['A'] || keys['ArrowLeft']) { player.dir = LEFT; dx = -player.speed; }
-  else if (keys['d'] || keys['D'] || keys['ArrowRight']) { player.dir = RIGHT; dx = player.speed; }
+  if (keys['w']) { player.dir = UP; dy = -player.speed; }
+  else if (keys['s']) { player.dir = DOWN; dy = player.speed; }
+  else if (keys['a']) { player.dir = LEFT; dx = -player.speed; }
+  else if (keys['d']) { player.dir = RIGHT; dx = player.speed; }
 
   if (dx !== 0 || dy !== 0) {
     // Try primary movement first
@@ -524,8 +524,8 @@ function updateBullets() {
             player.alive = false;
             gameOver(false);
           } else {
-            player.x = 9 * TILE;
-            player.y = 22 * TILE;
+            player.x = 8 * TILE;
+            player.y = 20 * TILE;
             player.dir = UP;
             player.invincible = 120;
           }
@@ -764,7 +764,8 @@ function gameLoop() {
       ctx.fillStyle = '#0f0';
       ctx.font = '12px monospace';
       let tileInfo = getTile(player.x, player.y);
-      ctx.fillText('pos:' + player.x + ',' + player.y + ' tile:' + tileInfo + ' keys:' + Object.keys(keys).filter(k=>keys[k]).join(','), 4, 12);
+      let activeKeys = Object.keys(keys).filter(k=>keys[k]).join(',');
+      ctx.fillText('pos:' + player.x + ',' + player.y + ' tile:' + tileInfo + ' keys:[' + activeKeys + ']', 4, 12);
       ctx.fillText('up:' + canMove(player,0,-2) + ' down:' + canMove(player,0,2) + ' left:' + canMove(player,-2,0) + ' right:' + canMove(player,2,0), 4, 26);
     }
 
@@ -803,17 +804,33 @@ function startGame() {
   gameLoop();
 }
 
-// Keyboard events
+// Keyboard events - use e.code for reliable detection
+const keyMap = {
+  'KeyW': 'w', 'KeyA': 'a', 'KeyS': 's', 'KeyD': 'd',
+  'ArrowUp': 'w', 'ArrowDown': 's', 'ArrowLeft': 'a', 'ArrowRight': 'd',
+  'Space': ' '
+};
+
 document.addEventListener('keydown', (e) => {
-  keys[e.key] = true;
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) {
+  let k = keyMap[e.code];
+  if (k) {
+    keys[k] = true;
     e.preventDefault();
   }
 });
 
 document.addEventListener('keyup', (e) => {
-  keys[e.key] = false;
+  let k = keyMap[e.code];
+  if (k) {
+    keys[k] = false;
+  }
 });
+
+// Ensure canvas gets focus for keyboard events
+canvas.setAttribute('tabindex', '0');
+canvas.style.outline = 'none';
+canvas.addEventListener('click', () => canvas.focus());
+document.addEventListener('click', () => canvas.focus());
 </script>
 </body>
 </html>
