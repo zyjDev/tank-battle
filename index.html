@@ -255,7 +255,8 @@ function createEnemy(x, y, type) {
     changeDir: Math.floor(Math.random() * 60) + 30,
     type: type,
     hp: type === 2 ? 3 : 1,
-    alive: true
+    alive: true,
+    stuckFrames: 0
   };
 }
 
@@ -281,7 +282,7 @@ function createExplosion(x, y, big) {
 
 function spawnEnemy() {
   if (enemiesRemaining <= 0 || enemiesOnScreen >= maxEnemiesOnScreen) return;
-  let spawnPoints = [[1, 1], [12, 1], [23, 1]];
+  let spawnPoints = [[2, 1], [12, 1], [22, 1]];
   let sp = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
 
   // Check if spawn point is clear
@@ -367,25 +368,34 @@ function updatePlayer() {
   else if (keys['a'] || keys['A'] || keys['ArrowLeft']) { player.dir = LEFT; dx = -player.speed; }
   else if (keys['d'] || keys['D'] || keys['ArrowRight']) { player.dir = RIGHT; dx = player.speed; }
 
-  // Snap to grid for easier navigation
-  if (dx !== 0) {
-    let remainder = player.y % TILE;
-    if (remainder !== 0) {
-      if (remainder < TILE / 2) dy = -Math.min(player.speed, remainder);
-      else dy = Math.min(player.speed, TILE - remainder);
+  if (dx !== 0 || dy !== 0) {
+    // Try primary movement first
+    if (canMove(player, dx, dy)) {
+      player.x += dx;
+      player.y += dy;
     }
-  }
-  if (dy !== 0) {
-    let remainder = player.x % TILE;
-    if (remainder !== 0) {
-      if (remainder < TILE / 2) dx = -Math.min(player.speed, remainder);
-      else dx = Math.min(player.speed, TILE - remainder);
+    // If blocked, try snapping to grid (perpendicular alignment)
+    else if (dx !== 0) {
+      let remainder = player.y % TILE;
+      let snapDy = 0;
+      if (remainder !== 0) {
+        snapDy = remainder <= TILE / 2 ? -Math.min(player.speed, remainder) : Math.min(player.speed, TILE - remainder);
+      }
+      if (snapDy !== 0 && canMove(player, dx, snapDy)) {
+        player.x += dx;
+        player.y += snapDy;
+      }
+    } else {
+      let remainder = player.x % TILE;
+      let snapDx = 0;
+      if (remainder !== 0) {
+        snapDx = remainder <= TILE / 2 ? -Math.min(player.speed, remainder) : Math.min(player.speed, TILE - remainder);
+      }
+      if (snapDx !== 0 && canMove(player, snapDx, dy)) {
+        player.x += snapDx;
+        player.y += dy;
+      }
     }
-  }
-
-  if (canMove(player, dx, dy)) {
-    player.x += dx;
-    player.y += dy;
   }
 
   if (keys[' '] && player.cooldown <= 0) {
@@ -424,8 +434,17 @@ function updateEnemies() {
     if (canMove(e, dx, dy)) {
       e.x += dx;
       e.y += dy;
+      e.stuckFrames = 0;
     } else {
       e.moveTimer = e.changeDir; // Force direction change
+      e.stuckFrames++;
+      // If stuck for too long, teleport to a valid spawn point
+      if (e.stuckFrames > 120) {
+        let sp = [[2, 1], [12, 1], [22, 1]][Math.floor(Math.random() * 3)];
+        e.x = sp[0] * TILE;
+        e.y = sp[1] * TILE;
+        e.stuckFrames = 0;
+      }
     }
 
     // Shoot
@@ -716,32 +735,36 @@ function checkWin() {
 function gameLoop() {
   if (gameState !== 'playing') return;
 
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  try {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  updatePlayer();
-  updateEnemies();
-  updateBullets();
-  updateExplosions();
+    updatePlayer();
+    updateEnemies();
+    updateBullets();
+    updateExplosions();
 
-  // Spawn enemies
-  enemySpawnTimer++;
-  if (enemySpawnTimer >= 120) {
-    enemySpawnTimer = 0;
-    spawnEnemy();
+    // Spawn enemies
+    enemySpawnTimer++;
+    if (enemySpawnTimer >= 120) {
+      enemySpawnTimer = 0;
+      spawnEnemy();
+    }
+
+    drawMap();
+    if (player) drawTank(player, player.color);
+    for (let e of enemies) drawTank(e, e.color);
+    drawBullets();
+    drawTrees();
+    drawExplosions();
+    updateUI();
+
+    if (gameState === 'playing') checkWin();
+  } catch (err) {
+    console.error('Game error:', err);
   }
 
-  drawMap();
-  if (player) drawTank(player, player.color);
-  for (let e of enemies) drawTank(e, e.color);
-  drawBullets();
-  drawTrees();
-  drawExplosions();
-  updateUI();
-
-  if (gameState === 'playing') checkWin();
-
-  requestAnimationFrame(gameLoop);
+  if (gameState === 'playing') requestAnimationFrame(gameLoop);
 }
 
 function startGame() {
