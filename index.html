@@ -759,6 +759,15 @@ function gameLoop() {
     drawExplosions();
     updateUI();
 
+    // Debug overlay
+    if (player) {
+      ctx.fillStyle = '#0f0';
+      ctx.font = '12px monospace';
+      let tileInfo = getTile(player.x, player.y);
+      ctx.fillText('pos:' + player.x + ',' + player.y + ' tile:' + tileInfo + ' keys:' + Object.keys(keys).filter(k=>keys[k]).join(','), 4, 12);
+      ctx.fillText('up:' + canMove(player,0,-2) + ' down:' + canMove(player,0,2) + ' left:' + canMove(player,-2,0) + ' right:' + canMove(player,2,0), 4, 26);
+    }
+
     if (gameState === 'playing') checkWin();
   } catch (err) {
     console.error('Game error:', err);
