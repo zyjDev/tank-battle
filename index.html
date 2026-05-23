@@ -230,7 +230,7 @@ function generateMap(lvl) {
 
 function createPlayer() {
   return {
-    x: 9 * TILE, y: 24 * TILE,
+    x: 9 * TILE, y: 22 * TILE,
     w: TILE * 2, h: TILE * 2,
     dir: UP, speed: 2,
     color: '#ffcc00',
@@ -525,7 +525,7 @@ function updateBullets() {
             gameOver(false);
           } else {
             player.x = 9 * TILE;
-            player.y = 24 * TILE;
+            player.y = 22 * TILE;
             player.dir = UP;
             player.invincible = 120;
           }
